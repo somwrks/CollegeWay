@@ -11,9 +11,12 @@ Software
 7. user trigger functions
 8. projects modals and db setup
 9. project trigger functions
+10. collaboration tool intro
+11. project editor ui
+12. ai models implementation
 
 Machine Learning
 
 1. ID Recognition Model
 2. Recommendation model
-3. 
+3. search engine build
