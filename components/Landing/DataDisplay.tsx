@@ -8,7 +8,7 @@ export default function DataDisplay() {
 
   useEffect(() => {
     async function fetchData() {
-      const usersResponse = await fetch('/api/users');
+      const usersResponse = await fetch('/api/getUsers');
       const usersData = await usersResponse.json();
       setUsers(usersData);
 
