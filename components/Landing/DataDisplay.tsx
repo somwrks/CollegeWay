@@ -12,7 +12,7 @@ export default function DataDisplay() {
       const usersData = await usersResponse.json();
       setUsers(usersData);
 
-      const flaskResponse = await fetch('/api/hello');
+      const flaskResponse = await fetch('/api/python/hello');
       const flaskData = await flaskResponse.json();
       setFlaskMessage(flaskData.message);
     }
