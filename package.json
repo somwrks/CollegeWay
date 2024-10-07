@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "flask-dev": "pip install -r requirements.txt && python api/index.py",
+    "next-dev": "next dev",
+    "dev": "concurrently \"npm run next-dev\" \"npm run flask-dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@clerk/nextjs": "^5.7.1",
+    "concurrently": "^9.0.1",
     "mongodb": "^6.9.0",
     "next": "14.2.14",
     "react": "^18",
