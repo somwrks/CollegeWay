@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
 
   images: {
-    domains: ["img.clerk.com", "i.ibb.co", "i.imgur.com", "picsum.photos"],
+    domains: ["img.clerk.com","upload.wikimedia.org", "i.ibb.co", "i.imgur.com", "picsum.photos"],
   },
 
   async rewrites() {
