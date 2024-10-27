@@ -13,7 +13,7 @@ supabase: Client = create_client(
     supabase_url='',
     supabase_key=''
 )
-openai.api_key= "sk-eA2xw9CMM8TFr09i6ebGNZgZufHvJjA7OGE2K1__SIT3BlbkFJCcg6Exgjj543ebbZWJmcUcB6ZRy3ePbZyOt08tRn0A"
+openai.api_key= ""
 # Common App essay prompts for 2024-2025
 COMMON_APP_QUESTIONS = [
     {
