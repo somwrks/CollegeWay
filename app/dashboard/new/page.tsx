@@ -13,7 +13,7 @@ export default function Page() {
   const router = useRouter();
   
   const questions = [
-    "Which University?",
+    "Which University/Scholarship?",
     "What type of application is this?",
   ];
 
