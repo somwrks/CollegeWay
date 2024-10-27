@@ -1,7 +1,7 @@
 
-# CollegeWay
+# CollegeFreeWay
 
-CollegeWay is a modern web application that simplifies the college application process by providing an intuitive platform for students to build, customize, and manage their college applications efficiently.
+CollegeFreeWay is a modern web application that simplifies the college application process by providing an intuitive platform for students to build, customize, and manage their college applications efficiently.
 
 ## Features
 
