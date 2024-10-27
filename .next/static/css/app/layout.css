@@ -2097,6 +2097,10 @@ video {
 .font-sans {
   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
 .text-3xl {
   font-size: 1.875rem;
   line-height: 2.25rem;
@@ -2121,6 +2125,10 @@ video {
 .text-medium {
   font-size: var(--nextui-font-size-medium);
   line-height: var(--nextui-line-height-medium);
+}
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 .text-small {
   font-size: var(--nextui-font-size-small);
@@ -2224,6 +2232,10 @@ video {
 .text-foreground-600 {
   --tw-text-opacity: 1;
   color: hsl(var(--nextui-foreground-600) / var(--nextui-foreground-600-opacity, var(--tw-text-opacity)));
+}
+.text-gray-400 {
+  --tw-text-opacity: 1;
+  color: rgb(156 163 175 / var(--tw-text-opacity));
 }
 .text-inherit {
   color: inherit;
