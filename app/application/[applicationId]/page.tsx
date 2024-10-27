@@ -12,6 +12,8 @@ import {
   Checkbox,
   Spinner,
   Textarea,
+  NavbarContent,
+  NavbarItem,
 } from "@nextui-org/react";
 import { useUser } from "@clerk/nextjs";
 
@@ -47,10 +49,9 @@ export default function ApplicationDetail() {
         // Fetch questions based on application type
         const questionsResponse = await fetch(`/api/python/questions?type=${appData.type}`);
         const questionsData = await questionsResponse.json();
-        
+        setQuestions(questionsData.questions)
+        console.log(questionsData)
         // Set questions
-        setQuestions(questionsData.questions);
-
         // Initialize or set existing answers
         const existingAnswers = appData.answers || new Array(questionsData.questions.length).fill("");
         setAnswers(existingAnswers);
@@ -122,8 +123,8 @@ export default function ApplicationDetail() {
       });
   
       const data = await response.json();
-      if (data.answer) {
-        handleAnswerChange(index, data.answer);
+      if (data.choices[0].message.content) {
+        handleAnswerChange(index, data.choices[0].message.content);
       }
     } catch (error) {
       console.error("Error generating AI answer:", error);
@@ -131,6 +132,43 @@ export default function ApplicationDetail() {
       setGeneratingAnswers(prev => ({ ...prev, [index]: false }));
     }
   };
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/python/generate-docx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questions: questions,
+          answers: answers,
+          title: application?.title || 'Application Details'
+        }),
+      });
+  
+      if (!response.ok) throw new Error('Failed to generate DOCX');
+  
+      // Create a blob from the DOCX Stream
+      const blob = await response.blob();
+      // Create a link element
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = "application_details.docx";
+  
+      // Append link to body, click it, and remove it
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+  
+      // Cleanup
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Error exporting DOCX:", error);
+    }
+  };
+
+
   return (
     <>
       <Navbar className="shadow-sm">
@@ -139,6 +177,11 @@ export default function ApplicationDetail() {
             CollegeFreeWay
           </Link>
         </NavbarBrand>
+        <NavbarContent justify="end">
+          <NavbarItem>
+           
+          </NavbarItem>
+        </NavbarContent>
       </Navbar>
       
       <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto">
@@ -146,13 +189,24 @@ export default function ApplicationDetail() {
           <h1 className="text-2xl font-bold">
             {application?.title || 'Application Form'}
           </h1>
+          <div className="flex flex-row gap-2">
+
+          <Button 
+  color="default" 
+  variant="shadow"
+  className="font-semibold"
+  onClick={handleExport}
+>
+  Export
+</Button>
           <Button 
             color="primary"
             onClick={saveAnswers}
             isLoading={saving}
           >
-            Save Progress
+            Save
           </Button>
+          </div>
         </div>
 
         <div className="space-y-6 bg-black">

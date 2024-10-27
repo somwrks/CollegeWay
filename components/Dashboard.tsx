@@ -16,6 +16,7 @@ import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import LoadingCard from "./LoadingCard";
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
@@ -78,7 +79,7 @@ const router = useRouter();
           </NavbarItem>
         </NavbarContent>
       </Navbar>
-
+<div className="flex flex-row justify-between">
       <div className="container p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoading
@@ -117,6 +118,11 @@ const router = useRouter();
               ))}
         </div>
       </div>
+<div className="flex flex-col min-h-screen gap-4 bg-gray-900 w-1/3 h-full">
+<h1 className="text-3xl text-center mt-4">Quick Access</h1>
+<LoadingCard/>
+</div>
+</div>
     </div>
   );
 }

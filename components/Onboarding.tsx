@@ -5,8 +5,9 @@ import { Input } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import { createClient } from '@supabase/supabase-js';
+import { Navbar, NavbarBrand, NavbarContent, NavbarItem } from "@nextui-org/react";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -122,6 +123,8 @@ export default function Onboarding() {
   }
 
   return (
+    <>
+  
     <div className="flex flex-col w-1/2 justify-center items-center p-4 gap-3">
       <AnimatePresence mode="wait">
         <motion.div
@@ -154,5 +157,6 @@ export default function Onboarding() {
         </motion.div>
       </AnimatePresence>
     </div>
+    </>
   );
 }

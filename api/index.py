@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file, after_this_request
 from bs4 import BeautifulSoup
 import requests
 import openai
@@ -7,13 +7,21 @@ import os
 from supabase import create_client, Client
 from cachetools import TTLCache
 from typing import Dict, List
+from fpdf import FPDF  # Make sure this import is at the top of your file
+import os
+from datetime import datetime
+from docx import Document  # Add this import at the top
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
 
 app = Flask(__name__)
 supabase: Client = create_client(
-    supabase_url='',
-    supabase_key=''
+    supabase_url='https://bfskhzxnjscoujggswqw.supabase.co',
+    supabase_key='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJmc2toenhuanNjb3VqZ2dzd3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzAwMDk5MzgsImV4cCI6MjA0NTU4NTkzOH0.aVNdwVJ7VSZ7Sjq4mBOx17hnzmH-AgxwwkIv9fr1r3s'
 )
-openai.api_key= ""
+mistral_api_key = "FhMGkm2shvRoKS59clMyPcRjL2KBnlwn"
+
 # Common App essay prompts for 2024-2025
 COMMON_APP_QUESTIONS = [
     {
@@ -112,7 +120,7 @@ def get_application_questions():
     
     if app_type == 'University':
         response_data = {
-            "common_app": COMMON_APP_QUESTIONS
+            "questions": COMMON_APP_QUESTIONS
         }
         
         # Add university-specific questions if university is specified
@@ -234,6 +242,7 @@ def scrape_university_data():
             "error": "Failed to scrape university data",
             "details": str(e)
         }), 500
+
 @app.route('/api/python/generate-answer', methods=['POST'])
 def generate_answer():
     try:
@@ -263,7 +272,7 @@ def generate_answer():
             except Exception as scrape_error:
                 print(f"Error fetching university data: {str(scrape_error)}")
 
-        # Construct enhanced prompt with university data
+        # Construct prompt (same as before)
         prompt = f"""
         Student Profile:
         - Academic Background:
@@ -284,79 +293,98 @@ def generate_answer():
           • First Generation Student: {'Yes' if user_data.get('first_generation_student') else 'No'}
         """
 
-        # Add university-specific information if available
         if university_data:
             prompt += f"""
-            
-        University Information for {university_data['name']}:
-        - Admission Criteria:
-          {chr(10).join([f"• {criterion}" for criterion in university_data['admissions_criteria']])}
-        
-        - Popular Majors:
-          {chr(10).join([f"• {major}" for major in university_data['popular_majors']])}
-        
-        - Application Tips:
-          {chr(10).join([f"• {tip}" for tip in university_data['application_tips']])}
-        
-        - Requirements:
-          {chr(10).join([f"• {req}" for req in university_data['requirements']])}
-        """
+            University Information for {university_data['name']}:
+            - Admission Criteria:
+              {chr(10).join([f"• {criterion}" for criterion in university_data['admissions_criteria']])}
+            - Popular Majors:
+              {chr(10).join([f"• {major}" for major in university_data['popular_majors']])}
+            - Application Tips:
+              {chr(10).join([f"• {tip}" for tip in university_data['application_tips']])}
+            - Requirements:
+              {chr(10).join([f"• {req}" for req in university_data['requirements']])}
+            """
 
         prompt += f"""
-        
         Application Question: {data['question']}
+        Instructions: Write a compelling response that aligns with the university's values, addressing all aspects of the prompt, while highlighting the student's background. Avoid including any unnecessary details or references or headings, just the answer text is required. Make it sound unique and sound like i wrote it. Don't make it too long or complex."""
 
-        Instructions for Response:
-        1. Write a compelling response that aligns with the university's values and requirements
-        2. Use specific examples from the student's background that match the university's criteria
-        3. Reference relevant university-specific information when applicable
-        4. Maintain a natural, conversational tone while being academically appropriate
-        5. Address all aspects of the prompt thoroughly
-        6. Stay within word limits while being detailed and specific
-        7. Highlight experiences that align with the university's popular programs and requirements
-        8. If the student is a first-generation student, incorporate that perspective thoughtfully
-        9. Connect the student's experiences to their intended major and the university's offerings
-        """
-
-        # Generate response using OpenAI
-        client = openai.Client(api_key=openai.api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
+        # Mistral API request
+        mistral_data = {
+            "model": "open-mistral-nemo",
+            "messages": [
                 {
-                    "role": "system", 
-                    "content": "You are an experienced college application counselor who helps students write compelling, university-specific application essays."
+                    "role": "system",
+                    "content": "You are an experienced college application counselor helping students write compelling essays."
                 },
-                {"role": "user", "content": prompt}
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
-            max_tokens=1500,
-            temperature=0.85,
-            presence_penalty=0.6,
-            frequency_penalty=0.8
+            "max_tokens": 1500,
+            "temperature": 0.85,
+            "presence_penalty": 0.6,
+            "frequency_penalty": 0.8
+        }
+
+        mistral_response = requests.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {mistral_api_key}",
+                "Content-Type": "application/json"
+            },
+            json=mistral_data
         )
 
-        generated_answer = response.choices[0].message.content
+        if mistral_response.status_code == 200:
+            response_data = mistral_response.json()
+            generated_answer = response_data['choices'][0]['message']['content']
 
-        # Update application with new answer (same as before)
-        try:
-            current_app = supabase.table('applications').select('questions_answers').eq('applicationid', data.get('applicationId')).execute()
-            if current_app.data and len(current_app.data) > 0:
-                current_qa = current_app.data[0].get('questions_answers', {'questions': [], 'answers': []})
+            # Update application with new question and answer
+            try:
+                current_app = supabase.table('applications').select('questions, answers').eq('applicationid', data.get('applicationId')).execute()
                 
-                supabase.table('applications').update({
-                    'questions_answers': {
-                        'questions': current_qa.get('questions', []) + [data['question']],
-                        'answers': current_qa.get('answers', []) + [generated_answer]
-                    }
-                }).eq('applicationid', data.get('applicationId')).execute()
-        except Exception as update_error:
-            print(f"Error updating application: {str(update_error)}")
+                if current_app.data and len(current_app.data) > 0:
+                    # Get current questions and answers
+                    current_questions = current_app.data[0].get('questions', [])
+                    current_answers = current_app.data[0].get('answers', [])
+                    
+                    # Update with new question and answer
+                    supabase.table('applications').update({
+                        'questions': current_questions + [data['question']],
+                        'answers': current_answers + [generated_answer]
+                    }).eq('applicationid', data.get('applicationId')).execute()
+                else:
+                    # Create new application if it doesn't exist
+                    supabase.table('applications').insert({
+                        'applicationid': data.get('applicationId'),
+                        'title': data.get('university', ''),
+                        'userid': data['user_profile']['id'],
+                        'date': datetime.now().isoformat(),
+                        'type': 'college',
+                        'questions': [data['question']],
+                        'answers': [generated_answer]
+                    }).execute()
 
-        return jsonify({
-            "answer": generated_answer,
-            "timestamp": datetime.now().isoformat(),
-            "status": "success"
-        })
+            except Exception as update_error:
+                print(f"Error updating application: {str(update_error)}")
+                # Continue even if update fails
+
+            # Return the response in the format expected by the frontend
+            return jsonify({
+                "choices": [{
+                    "message": {
+                        "content": generated_answer
+                    }
+                }]
+            })
+        else:
+            return jsonify({
+                "error": "Failed to generate answer from Mistral",
+                "details": mistral_response.text
+            }), 500
 
     except Exception as e:
         print(f"Error generating answer: {str(e)}")
@@ -364,9 +392,202 @@ def generate_answer():
             "error": "Failed to generate answer",
             "details": str(e)
         }), 500
+@app.route('/api/python/generate-docx', methods=['POST'])
+def generate_docx():
+    try:
+        data = request.json
+        questions = data.get('questions', [])
+        answers = data.get('answers', [])
+        title = data.get('title', 'Application Details')
+
+        doc = Document()
+        
+        # Add title
+        title_heading = doc.add_heading(title, level=1)
+        title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Add content
+        for i, (q, a) in enumerate(zip(questions, answers)):
+            # Add question
+            question_text = q['question'] if isinstance(q, dict) else str(q)
+            question_para = doc.add_paragraph()
+            question_run = question_para.add_run(f"Question {i+1}: {question_text}")
+            question_run.bold = True
+            question_run.font.size = Pt(12)
+
+            # Add answer
+            answer_para = doc.add_paragraph()
+            if isinstance(a, list):  # If answer is formatted with bold sections
+                for part in a:
+                    if isinstance(part, dict):
+                        run = answer_para.add_run(part['text'])
+                        run.bold = part.get('bold', False)
+                        run.font.size = Pt(12)
+            else:
+                answer_text = str(a) if a else "No answer provided"
+                answer_run = answer_para.add_run(f"Answer: {answer_text}")
+                answer_run.font.size = Pt(12)
+
+            # Add spacing
+            doc.add_paragraph()
+
+        filename = f"application_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+        doc_path = os.path.join(os.getcwd(), filename)
+        doc.save(doc_path)
+
+        return send_file(
+            doc_path,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name='application.docx'
+        )
+
+    except Exception as e:
+        print(f"DOCX Generation Error: {str(e)}")
+        return jsonify({
+            "error": "Failed to generate DOCX",
+            "details": str(e)
+        }), 500
+
+
+
+
 
 if __name__ == '__main__':
     app.run(port=5328)
+
+# @app.route('/api/python/generate-answer', methods=['POST'])
+# def generate_answer():
+#     try:
+#         data = request.json
+#         if not data or 'question' not in data or 'user_profile' not in data:
+#             return jsonify({"error": "Missing required parameters"}), 400
+
+#         # Get user profile
+#         try:
+#             user_result = supabase.table('users').select('*').eq('userid', data['user_profile']['id']).execute()
+#             if not user_result.data or len(user_result.data) == 0:
+#                 return jsonify({"error": "User profile not found"}), 404
+#             user_data = user_result.data[0]
+#         except Exception as db_error:
+#             print(f"Database error: {str(db_error)}")
+#             return jsonify({"error": "Failed to fetch user profile", "details": str(db_error)}), 500
+
+#         # Get university data if available
+#         university_data = None
+#         if data.get('university'):
+#             try:
+#                 scrape_response = requests.get(
+#                     f"http://localhost:5328/api/python/scrape-university?university={data['university']}"
+#                 )
+#                 if scrape_response.status_code == 200:
+#                     university_data = scrape_response.json()
+#             except Exception as scrape_error:
+#                 print(f"Error fetching university data: {str(scrape_error)}")
+
+#         # Construct enhanced prompt with university data
+#         prompt = f"""
+#         Student Profile:
+#         - Academic Background:
+#           • Grade Level: {user_data.get('grade', 'N/A')}
+#           • GPA: {user_data.get('gpa', 'N/A')}
+#           • Standardized Tests: {user_data.get('standardized_tests', 'N/A')}
+#           • Highest Coursework: {user_data.get('highest_coursework', 'N/A')}
+#           • Academic Awards: {user_data.get('academic_awards', 'N/A')}
+        
+#         - Extracurricular Profile:
+#           • Activities: {user_data.get('extracurricular_activities', 'N/A')}
+#           • Community Service: {user_data.get('community_service', 'N/A')}
+#           • Hobbies: {user_data.get('hobbies', 'N/A')}
+        
+#         - College Preferences:
+#           • Intended Majors: {user_data.get('intended_majors', 'N/A')}
+#           • Preferred College Type: {user_data.get('preferred_college_type', 'N/A')}
+#           • First Generation Student: {'Yes' if user_data.get('first_generation_student') else 'No'}
+#         """
+
+#         # Add university-specific information if available
+#         if university_data:
+#             prompt += f"""
+            
+#         University Information for {university_data['name']}:
+#         - Admission Criteria:
+#           {chr(10).join([f"• {criterion}" for criterion in university_data['admissions_criteria']])}
+        
+#         - Popular Majors:
+#           {chr(10).join([f"• {major}" for major in university_data['popular_majors']])}
+        
+#         - Application Tips:
+#           {chr(10).join([f"• {tip}" for tip in university_data['application_tips']])}
+        
+#         - Requirements:
+#           {chr(10).join([f"• {req}" for req in university_data['requirements']])}
+#         """
+
+#         prompt += f"""
+        
+#         Application Question: {data['question']}
+
+#         Instructions for Response:
+#         1. Write a compelling response that aligns with the university's values and requirements
+#         2. Use specific examples from the student's background that match the university's criteria
+#         3. Reference relevant university-specific information when applicable
+#         4. Maintain a natural, conversational tone while being academically appropriate
+#         5. Address all aspects of the prompt thoroughly
+#         6. Stay within word limits while being detailed and specific
+#         7. Highlight experiences that align with the university's popular programs and requirements
+#         8. If the student is a first-generation student, incorporate that perspective thoughtfully
+#         9. Connect the student's experiences to their intended major and the university's offerings
+#         """
+
+#         # Generate response using OpenAI
+#         client = openai.Client(api_key=openai.api_key)
+#         response = client.chat.completions.create(
+#             model="gpt-4o-mini",
+#             messages=[
+#                 {
+#                     "role": "system", 
+#                     "content": "You are an experienced college application counselor who helps students write compelling, university-specific application essays."
+#                 },
+#                 {"role": "user", "content": prompt}
+#             ],
+#             max_tokens=1500,
+#             temperature=0.85,
+#             presence_penalty=0.6,
+#             frequency_penalty=0.8
+#         )
+
+#         generated_answer = response.choices[0].message.content
+
+#         # Update application with new answer (same as before)
+#         try:
+#             current_app = supabase.table('applications').select('questions_answers').eq('applicationid', data.get('applicationId')).execute()
+#             if current_app.data and len(current_app.data) > 0:
+#                 current_qa = current_app.data[0].get('questions_answers', {'questions': [], 'answers': []})
+                
+#                 supabase.table('applications').update({
+#                     'questions_answers': {
+#                         'questions': current_qa.get('questions', []) + [data['question']],
+#                         'answers': current_qa.get('answers', []) + [generated_answer]
+#                     }
+#                 }).eq('applicationid', data.get('applicationId')).execute()
+#         except Exception as update_error:
+#             print(f"Error updating application: {str(update_error)}")
+
+#         return jsonify({
+#             "answer": generated_answer,
+#             "timestamp": datetime.now().isoformat(),
+#             "status": "success"
+#         })
+
+#     except Exception as e:
+#         print(f"Error generating answer: {str(e)}")
+#         return jsonify({
+#             "error": "Failed to generate answer",
+#             "details": str(e)
+#         }), 500
+
+
     
     
 #  fetch common app questions an pass it to frontend for answering
