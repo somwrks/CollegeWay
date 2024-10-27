@@ -1,17 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// Define the type for the expected request body
 interface ApplicationRequest {
+  userid: any;
   applicationId: string;
-  userid: string;
   title: string;
   date: string;
   type: string;
-  data: any;
 }
 
-// Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -19,28 +16,28 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
-    // Parse the request body
     const body: ApplicationRequest = await request.json();
 
     // Validate required fields
-    if (!body.userid || !body.title || !body.date || !body.type) {
+    if (!body.applicationId || !body.title || !body.date || !body.type) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Insert the application into the database
+    // Insert the application with empty arrays
     const { data, error } = await supabase
       .from('applications')
       .insert([
         {
-          applicationid : body.applicationId,
-          userid: body.userid,
+          userid:body.userid,
+          applicationid: body.applicationId,
           title: body.title,
           date: body.date,
           type: body.type,
-          data: body.data
+          answers: [],
+          questions: []
         }
       ])
       .select();
@@ -53,11 +50,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Return the created application
-    return NextResponse.json(
-      { message: 'Application created successfully', application: data[0] },
-      { status: 201 }
-    );
+    return NextResponse.json(data[0], { status: 201 });
 
   } catch (error) {
     console.error('Server error:', error);
@@ -67,4 +60,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

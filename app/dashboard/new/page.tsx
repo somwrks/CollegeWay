@@ -33,19 +33,18 @@ export default function Page() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            applicationId: applicationId,
             userid: user?.id,
             title: responses[0], // University name
             date: new Date().toISOString(),
             type: responses[1], // Application type
-            data: {},
-            applicationId: applicationId
           }),
         });
-
+  
         if (!response.ok) {
           throw new Error('Failed to create application');
         }
-
+  
         router.push(`/application/${applicationId}`);
       } catch (error) {
         console.error('Error creating application:', error);

@@ -1,1 +1,6 @@
 Flask
+requests 
+beautifulsoup4 
+fake-useragent
+supabase
+cachetools
